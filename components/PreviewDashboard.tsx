@@ -24,7 +24,7 @@ const previewSteps = [
 const activePreviews = [
   {
     pr: "#184",
-    title: "Usage-based billing review",
+    title: "Previewed billing approvals",
     branch: "billing/meter-rollups",
     owner: "Asha",
     status: "Ready",
@@ -115,10 +115,10 @@ export function PreviewDashboard() {
         <header className="topbar" id="overview">
           <div className="hero-copy">
             <p className="eyebrow">Customer-facing demo</p>
-            <h2>Every pull request gets a live app without building a preview platform.</h2>
+            <h2>Billing approvals are live on this branch before staging exists.</h2>
             <p>
-              Daytona turns branch code into a disposable sandbox URL, then keeps
-              secrets, setup failures, and cleanup visible in the PR.
+              This visible copy changed on a feature branch. Daytona can run that
+              branch in a disposable sandbox before anything reaches staging.
             </p>
           </div>
           <div className="topbar-actions" aria-label="Demo actions">
@@ -173,7 +173,7 @@ export function PreviewDashboard() {
               </div>
               <div className="preview-canvas">
                 <div className="invoice-strip">
-                  <span>Billing meters branch</span>
+                  <span>Demo branch change</span>
                   <strong>$4,280</strong>
                 </div>
                 <div className="usage-chart" aria-hidden="true">
