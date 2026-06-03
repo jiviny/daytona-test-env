@@ -1,0 +1,15 @@
+node_modules/
+.next/
+out/
+.env
+.env*.local
+.env~
+.*.un~
+*~
+.preview-*.json
+.preview-*.md
+tsconfig.tsbuildinfo
+npm-debug.log*
+demo-artifacts/
+__pycache__/
+*.pyc

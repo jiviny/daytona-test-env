@@ -1,0 +1,35 @@
+{
+  "name": "daytona-sandbox-deployment-hack",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint . --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+    "preview": "npm run build && npm run start",
+    "preview:dry-run": "node scripts/preview-dry-run.mjs",
+    "demo:change": "node scripts/demo-change.mjs apply",
+    "demo:reset": "node scripts/demo-change.mjs reset",
+    "demo:customer": "node scripts/customer-demo.mjs",
+    "verify": "npm run lint && npm run typecheck && npm run build && npm run preview:dry-run && npm run demo:customer"
+  },
+  "dependencies": {
+    "next": "16.2.7",
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
+  },
+  "devDependencies": {
+    "@types/node": "25.9.1",
+    "@types/react": "19.2.16",
+    "@types/react-dom": "19.2.3",
+    "eslint": "9.39.4",
+    "eslint-config-next": "16.2.7",
+    "typescript": "6.0.3"
+  },
+  "engines": {
+    "node": ">=20.11.0"
+  }
+}

@@ -1,0 +1,169 @@
+name: Daytona PR Preview
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - closed
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+concurrency:
+  group: daytona-pr-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    name: Manage Daytona preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DAYTONA_API_KEY: ${{ secrets.DAYTONA_API_KEY }}
+      DAYTONA_API_URL: ${{ vars.DAYTONA_API_URL || 'https://app.daytona.io/api' }}
+      DAYTONA_ORGANIZATION_ID: ${{ secrets.DAYTONA_ORGANIZATION_ID || vars.DAYTONA_ORGANIZATION_ID }}
+      DAYTONA_TARGET: ${{ vars.DAYTONA_TARGET }}
+      DAYTONA_PREVIEW_SNAPSHOT: ${{ vars.DAYTONA_PREVIEW_SNAPSHOT || vars.DAYTONA_SNAPSHOT }}
+      DAYTONA_PREVIEW_PORT: ${{ vars.DAYTONA_PREVIEW_PORT || '3000' }}
+      DAYTONA_PREVIEW_URL_EXPIRES_SECONDS: ${{ vars.DAYTONA_PREVIEW_URL_EXPIRES_SECONDS || vars.DAYTONA_PREVIEW_EXPIRES_SECONDS || '86400' }}
+      DAYTONA_PREVIEW_AUTO_STOP_MINUTES: ${{ vars.DAYTONA_PREVIEW_AUTO_STOP_MINUTES || '30' }}
+      DAYTONA_PREVIEW_AUTO_DELETE_MINUTES: ${{ vars.DAYTONA_PREVIEW_AUTO_DELETE_MINUTES || '1440' }}
+      DAYTONA_PREVIEW_CPU: ${{ vars.DAYTONA_PREVIEW_CPU }}
+      DAYTONA_PREVIEW_MEMORY: ${{ vars.DAYTONA_PREVIEW_MEMORY }}
+      DAYTONA_PREVIEW_DISK: ${{ vars.DAYTONA_PREVIEW_DISK }}
+      DAYTONA_PREVIEW_PROJECT_DIR: ${{ vars.DAYTONA_PREVIEW_PROJECT_DIR || '/home/daytona/pr-preview' }}
+      DAYTONA_PREVIEW_SETUP_COMMAND: ${{ vars.DAYTONA_PREVIEW_SETUP_COMMAND || 'npm ci' }}
+      DAYTONA_PREVIEW_START_COMMAND: ${{ vars.DAYTONA_PREVIEW_START_COMMAND || 'npm run dev -- --hostname 0.0.0.0 --port 3000' }}
+      DAYTONA_PREVIEW_READY_COMMAND: ${{ vars.DAYTONA_PREVIEW_READY_COMMAND || 'curl -fsS http://127.0.0.1:3000/api/health' }}
+      DAYTONA_PREVIEW_COMMAND_TIMEOUT_SECONDS: ${{ vars.DAYTONA_PREVIEW_COMMAND_TIMEOUT_SECONDS || '900' }}
+      DAYTONA_PREVIEW_WAIT_SECONDS: ${{ vars.DAYTONA_PREVIEW_WAIT_SECONDS || '600' }}
+      DAYTONA_PREVIEW_ENV_ALLOWLIST: ${{ vars.DAYTONA_PREVIEW_ENV_ALLOWLIST }}
+      DAYTONA_PREVIEW_ENV_JSON: ${{ vars.DAYTONA_PREVIEW_ENV_JSON }}
+      DAYTONA_PREVIEW_ALLOW_SECRET_NAMES: ${{ vars.DAYTONA_PREVIEW_ALLOW_SECRET_NAMES || 'false' }}
+      DAYTONA_PREVIEW_ALLOW_FORKS: ${{ vars.DAYTONA_PREVIEW_ALLOW_FORKS || 'false' }}
+      DAYTONA_PREVIEW_NO_DEPLOY: ${{ vars.DAYTONA_PREVIEW_NO_DEPLOY || 'false' }}
+      DAYTONA_PREVIEW_GIT_USERNAME: ${{ secrets.DAYTONA_PREVIEW_GIT_USERNAME }}
+      DAYTONA_PREVIEW_GIT_PASSWORD: ${{ secrets.DAYTONA_PREVIEW_GIT_PASSWORD }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+      PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      PR_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+      PR_HEAD_CLONE_URL: ${{ github.event.pull_request.head.repo.clone_url }}
+      PR_IS_FORK: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
+      COMMENT_MARKER: "<!-- daytona-pr-preview -->"
+
+    steps:
+      - name: Check out trusted preview helper
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+
+      - name: Skip untrusted fork preview
+        if: github.event.action != 'closed' && env.PR_IS_FORK == 'true' && env.DAYTONA_PREVIEW_ALLOW_FORKS != 'true'
+        run: |
+          {
+            echo "$COMMENT_MARKER"
+            echo "## Daytona PR preview"
+            echo
+            echo "- Status: skipped"
+            echo "- Reason: fork PR previews are disabled by default."
+            echo "- Fork: \`$PR_HEAD_REPO\`"
+            echo
+            echo "Set repository variable \`DAYTONA_PREVIEW_ALLOW_FORKS=true\` only if this repository is ready to run fork code in disposable Daytona sandboxes."
+          } > "$RUNNER_TEMP/daytona-preview-comment.md"
+
+      - name: Create or update preview sandbox
+        id: daytona_upsert
+        if: github.event.action != 'closed' && (env.PR_IS_FORK != 'true' || env.DAYTONA_PREVIEW_ALLOW_FORKS == 'true')
+        run: |
+          set +e
+          python scripts/daytona-pr-preview.py upsert \
+            --repository "$GITHUB_REPOSITORY" \
+            --pr-number "$PR_NUMBER" \
+            --sha "$PR_HEAD_SHA" \
+            --head-ref "$PR_HEAD_REF" \
+            --repo-url "$PR_HEAD_CLONE_URL" \
+            --markdown-output "$RUNNER_TEMP/daytona-preview-body.md" \
+            --github-output "$GITHUB_OUTPUT"
+          status="$?"
+          set -e
+
+          if [ "$status" -eq 0 ]; then
+            {
+              echo "$COMMENT_MARKER"
+              cat "$RUNNER_TEMP/daytona-preview-body.md"
+            } > "$RUNNER_TEMP/daytona-preview-comment.md"
+          else
+            {
+              echo "$COMMENT_MARKER"
+              echo "## Daytona PR preview"
+              echo
+              echo "- Status: failed"
+              echo "- Commit: \`$PR_HEAD_SHA\`"
+              echo
+              echo "The workflow could not create or update the Daytona sandbox. Check the workflow logs for the helper error."
+            } > "$RUNNER_TEMP/daytona-preview-comment.md"
+            exit "$status"
+          fi
+
+      - name: Delete preview sandbox
+        id: daytona_delete
+        if: github.event.action == 'closed'
+        run: |
+          set +e
+          python scripts/daytona-pr-preview.py delete \
+            --repository "$GITHUB_REPOSITORY" \
+            --pr-number "$PR_NUMBER" \
+            --sha "$PR_HEAD_SHA" \
+            --head-ref "$PR_HEAD_REF" \
+            --markdown-output "$RUNNER_TEMP/daytona-preview-body.md" \
+            --github-output "$GITHUB_OUTPUT"
+          status="$?"
+          set -e
+
+          if [ "$status" -eq 0 ]; then
+            {
+              echo "$COMMENT_MARKER"
+              cat "$RUNNER_TEMP/daytona-preview-body.md"
+            } > "$RUNNER_TEMP/daytona-preview-comment.md"
+          else
+            {
+              echo "$COMMENT_MARKER"
+              echo "## Daytona PR preview cleanup"
+              echo
+              echo "- Status: failed"
+              echo
+              echo "The workflow could not delete the Daytona sandbox. Check the workflow logs for the helper error."
+            } > "$RUNNER_TEMP/daytona-preview-comment.md"
+            exit "$status"
+          fi
+
+      - name: Upsert PR comment
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ ! -s "$RUNNER_TEMP/daytona-preview-comment.md" ]; then
+            exit 0
+          fi
+
+          comment_id="$(
+            gh api "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments?per_page=100" \
+              --jq ".[] | select(.body | contains(\"$COMMENT_MARKER\")) | .id" \
+              | head -n 1
+          )"
+
+          if [ -n "$comment_id" ]; then
+            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$comment_id" \
+              --method PATCH \
+              --field "body=$(cat "$RUNNER_TEMP/daytona-preview-comment.md")"
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" \
+              --method POST \
+              --field "body=$(cat "$RUNNER_TEMP/daytona-preview-comment.md")"
+          fi

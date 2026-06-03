@@ -1,0 +1,16 @@
+
+> daytona-sandbox-deployment-hack@0.1.0 dev
+> next dev --hostname 127.0.0.1 --port 3001
+
+▲ Next.js 16.2.7 (Turbopack)
+- Local:         http://127.0.0.1:3001
+- Network:       http://127.0.0.1:3001
+- Environments: .env
+✓ Ready in 533ms
+
+ GET /api/health 200 in 779ms (next.js: 739ms, application-code: 39ms)
+ GET /api/health 200 in 24ms (next.js: 12ms, application-code: 12ms)
+ GET / 200 in 505ms (next.js: 148ms, application-code: 357ms)
+✓ Compiled in 98ms
+✓ Compiled in 10ms
+ GET / 200 in 326ms (next.js: 165ms, application-code: 161ms)
