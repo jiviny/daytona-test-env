@@ -68,15 +68,16 @@ This proves Daytona credentials, sandbox creation, lifecycle labels, signed prev
 
 1. Create a GitHub repo from this folder.
 2. Add repository secret `DAYTONA_API_KEY`.
-3. Add repository variables:
+3. Set `Settings -> Actions -> General -> Workflow permissions` to `Read and write permissions`.
+4. Add repository variables:
    - `DAYTONA_TARGET=us`
    - `DAYTONA_PREVIEW_SNAPSHOT=daytona-medium`
-4. Push `main`.
-5. Create a branch with a visible UI copy change.
-6. Open a same-repository pull request.
-7. Watch the `Daytona PR Preview` action run.
-8. Confirm it posts a PR comment with a signed preview URL.
-9. Close the PR and confirm the cleanup workflow deletes the sandbox.
+5. Push `main`.
+6. Create a branch with a visible UI copy change.
+7. Open a same-repository pull request.
+8. Watch the `Daytona PR Preview` action run.
+9. Confirm it posts a PR comment with a signed preview URL.
+10. Close the PR and confirm the cleanup workflow deletes the sandbox.
 
 ## Article Angle
 

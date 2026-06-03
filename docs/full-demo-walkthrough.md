@@ -31,6 +31,7 @@ The clean demo story:
 - Python 3.
 - A GitHub repo created from this folder.
 - GitHub Actions enabled.
+- GitHub Actions workflow permissions set to `Read and write permissions`.
 - Repository secret `DAYTONA_API_KEY`.
 - Repository variables:
   - `DAYTONA_TARGET=us`
@@ -90,6 +91,14 @@ In GitHub, add:
 ```text
 Settings -> Secrets and variables -> Actions -> Secrets -> New repository secret
 DAYTONA_API_KEY=<your key>
+```
+
+Allow the workflow to post the preview URL comment:
+
+```text
+Settings -> Actions -> General -> Workflow permissions
+Select: Read and write permissions
+Save
 ```
 
 Then add variables:

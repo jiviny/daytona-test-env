@@ -154,12 +154,14 @@ python scripts/daytona-pr-preview.py delete \
    - `scripts/daytona-pr-preview.py`
    - `src/daytona/pr_preview.py`
 2. Add repository secret `DAYTONA_API_KEY`.
-3. Add `DAYTONA_ORGANIZATION_ID` as a secret or variable if your Daytona account needs
+3. Set `Settings -> Actions -> General -> Workflow permissions` to `Read and write
+   permissions` so the workflow can post the preview URL back to the PR.
+4. Add `DAYTONA_ORGANIZATION_ID` as a secret or variable if your Daytona account needs
    it.
-4. Set optional repository variables only when the defaults are wrong for your app.
-5. Open a same-repository PR or push to an existing PR.
-6. Watch the workflow post or update one PR comment marked `<!-- daytona-pr-preview -->`.
-7. Close the PR to run the delete path.
+5. Set optional repository variables only when the defaults are wrong for your app.
+6. Open a same-repository PR or push to an existing PR.
+7. Watch the workflow post or update one PR comment marked `<!-- daytona-pr-preview -->`.
+8. Close the PR to run the delete path.
 
 The default workflow settings are:
 
