@@ -741,6 +741,56 @@ def base_result(config: PreviewConfig, name: str) -> dict[str, Any]:
     }
 
 
+FULLSTACK_ENV_FLAG = "DAYTONA_PREVIEW_FULLSTACK"
+
+
+def fullstack_enabled() -> bool:
+    return os.getenv(FULLSTACK_ENV_FLAG, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def render_fullstack_sections(preview_url: str) -> list[str]:
+    """Reviewer-facing handoff block for the full-stack Billing Operations Preview.
+
+    Only rendered when DAYTONA_PREVIEW_FULLSTACK is enabled. The health block is honest:
+    this comment is posted only after the readiness command (`/api/ready`) succeeds, and
+    that endpoint returns 200 only when every service is up.
+    """
+    base = preview_url.rstrip("/") if preview_url else ""
+    webhook_url = f"{base}/api/webhooks/billing" if base else "<app-url>/api/webhooks/billing"
+    lines: list[str] = [
+        "",
+        "Seeded demo:",
+        "- Organization: Acme Logistics",
+        "- User: reviewer@example.com",
+        "- Starting plan: Starter (requested: Pro)",
+        "",
+        "Health (the readiness gate `/api/ready` passed before this comment posted):",
+        "- Web app: OK",
+        "- Postgres: OK",
+        "- Redis: OK",
+        "- Worker: OK",
+        "- Webhook receiver: OK",
+        "- Email capture: OK",
+        "",
+        "Try it:",
+        "1. Open the app URL.",
+        '2. Click "Upgrade to Pro".',
+        "3. Watch the worker timeline advance.",
+        "4. Confirm the preview email appears.",
+        '5. Click "Replay billing webhook".',
+        "6. Close the PR to delete this sandbox.",
+        "",
+        "Replay the billing webhook from any terminal:",
+        "```bash",
+        f'curl -X POST "{webhook_url}" \\',
+        '  -H "content-type: application/json" \\',
+        '  -H "x-demo-signature: <hmac-sha256(body, demo secret)>" \\',
+        "  -d '{\"type\":\"invoice.paid\",\"customer\":\"acme-logistics\"}'",
+        "```",
+    ]
+    return lines
+
+
 def render_markdown(result: dict[str, Any]) -> str:
     action = result.get("action")
     sandbox = result.get("sandbox") or {}
@@ -748,7 +798,11 @@ def render_markdown(result: dict[str, Any]) -> str:
     lines: list[str] = []
 
     if result.get("dry_run"):
-        lines.append("## Daytona PR preview dry run")
+        lines.append(
+            "## Daytona full-stack preview dry run"
+            if fullstack_enabled()
+            else "## Daytona PR preview dry run"
+        )
         lines.append("")
         lines.append(f"- Reason: {result.get('dry_run_reason', 'dry run')}")
         lines.append(f"- Sandbox name: `{result.get('sandbox_name')}`")
@@ -776,7 +830,7 @@ def render_markdown(result: dict[str, Any]) -> str:
             lines.append("- Deleted: none; no matching PR preview sandbox was found")
         return "\n".join(lines) + "\n"
 
-    lines.append("## Daytona PR preview")
+    lines.append("## Daytona full-stack preview" if fullstack_enabled() else "## Daytona PR preview")
     lines.append("")
     if preview.get("url"):
         lines.append(f"- URL: {preview['url']}")
@@ -797,6 +851,8 @@ def render_markdown(result: dict[str, Any]) -> str:
         lines.append("Deployment:")
         for message in messages:
             lines.append(f"- {message}")
+    if fullstack_enabled() and preview.get("url"):
+        lines.extend(render_fullstack_sections(str(preview.get("url"))))
     skipped = result.get("skipped_env_names") or []
     if skipped:
         lines.append("")

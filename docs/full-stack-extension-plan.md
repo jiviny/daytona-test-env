@@ -6,6 +6,11 @@ full-stack preview environment with secrets, databases, workers, queues, and tea
 Do this in phases. Each phase should be useful on its own and should not require
 production secrets or production data.
 
+For the concrete, frozen pass/fail definition of "done" for this build, see
+[ACCEPTANCE_CRITERIA.md](./ACCEPTANCE_CRITERIA.md). That document lists the exact npm
+scripts, API routes, and the end-to-end Acme Logistics upgrade-plus-webhook flow this
+plan must satisfy.
+
 ## Current Demo Baseline
 
 This repository implements the app-only preview foundation:
@@ -65,6 +70,13 @@ Do not include:
 - Production database access.
 - Real payment, email, SMS, or webhook side effects.
 - Long-running worker processes unless needed for the reviewed flow.
+
+Note: do not change the existing GitHub Action or the Python helper contract to move
+to the full stack. The switch is driven entirely by repo variables: point
+`DAYTONA_PREVIEW_SETUP_COMMAND` at `bash scripts/daytona-setup.sh`,
+`DAYTONA_PREVIEW_START_COMMAND` at `npm run preview:daytona`, and
+`DAYTONA_PREVIEW_READY_COMMAND` at `curl -fsS http://127.0.0.1:3000/api/ready`. The
+trusted base-branch helper, env allowlist, and PR-close cleanup stay exactly as proven.
 
 ## Phase 2: Environment Contract
 
@@ -163,9 +175,13 @@ Recommended startup default:
 3. Use database-per-PR or branch/clone only for flows that need stronger isolation or
    migration fidelity.
 
-For this demo, the next practical database step is a local or hosted non-production
-database seeded by the setup command. Add the database URL through explicit preview env,
-then make the readiness command fail if migrations or seed loading fail.
+For this demo, the database choice is real Postgres 17 in both paths: provisioned via
+Docker Compose (`docker-compose.preview.yml`) locally, and natively via `apt` inside
+Daytona, since the `daytona-medium` snapshot (Debian 13, Node 25) has no Docker but does
+have passwordless sudo. Either path speaks the same `DATABASE_URL` contract, so app code
+is identical. The database URL is supplied through explicit preview env, and the
+readiness command fails if migrations or seed loading fail. This is itself a teaching
+point: Daytona gives reviewers the full stack with no local Docker setup.
 
 ## Phase 5: Migrations And Seed Data
 
@@ -220,6 +236,15 @@ Rules:
 For the first worker-backed version, prefer one combined preview start command that
 launches only the worker needed for the reviewed flow. Broader worker orchestration
 should wait until there is a real review need.
+
+For this demo, the queue backend is real Redis (BullMQ) and the worker runs as a
+separate Node process (`npm run worker` -> `node worker/index.mjs`), started by
+`scripts/start-fullstack-preview.mjs` alongside migrate, seed, and Next on
+`0.0.0.0:3000`. The worker is part of readiness, not just startup: `GET /api/ready`
+gates on a worker heartbeat and returns 503 until the worker is live, while
+`GET /api/health` always returns 200 with a per-service `web/database/queue/worker/
+email/webhook` breakdown. The Daytona readiness command targets `/api/ready` so the URL
+is only published once the worker is actually processing jobs.
 
 ## Phase 7: Cleanup, Cost, And Audit
 
