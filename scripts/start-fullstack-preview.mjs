@@ -52,9 +52,14 @@ function provisionServices() {
   const pgDb = db.pathname.replace(/^\//, "") || "billing_preview";
   const redisPort = redis.port || "6379";
 
-  // Clean up any orphaned processes from a previous preview boot.
-  tryRun("pkill -f 'next/dist/bin/next' || true");
-  tryRun("pkill -f 'worker/index.mjs' || true");
+  // Clean up any orphaned processes from a previous preview boot (PR synchronize reuses
+  // the sandbox). Escalate to SIGKILL and pause so the old server releases port 3000
+  // before the new Next.js tries to bind it.
+  tryRun("pkill -TERM -f 'next/dist/bin/next' || true");
+  tryRun("pkill -TERM -f 'worker/index.mjs' || true");
+  tryRun("sleep 2");
+  tryRun("pkill -KILL -f 'next/dist/bin/next' || true");
+  tryRun("pkill -KILL -f 'worker/index.mjs' || true");
 
   const pgbin = findPgBin();
   if (!pgbin) {
@@ -98,6 +103,8 @@ async function waitForServices(timeoutMs = 90000) {
     if (dbReady && redisReady) return;
     await delay(1000);
   }
+  console.error(`[preview] services not ready (db=${dbReady} redis=${redisReady}); recent postgres log:`);
+  tryRun("tail -n 25 /tmp/billing-pg.log");
   throw new Error("postgres/redis did not become ready before timeout");
 }
 

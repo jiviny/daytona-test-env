@@ -37,6 +37,7 @@ export async function POST(request: Request) {
     await addAudit("webhook", `Billing webhook received: ${eventType} (${source})`);
     return Response.json({ ok: true, id: event.id, eventType });
   } catch (error) {
-    return Response.json({ ok: false, error: errorMessage(error) }, { status: 503 });
+    console.error("[webhook] persist failed:", errorMessage(error));
+    return Response.json({ ok: false, error: "Could not record webhook event." }, { status: 503 });
   }
 }

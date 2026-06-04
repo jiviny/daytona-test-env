@@ -169,6 +169,16 @@ export function PreviewDashboard() {
   const latestJob = state?.jobs?.[0] ?? null;
 
   const connectionLabel = state === null ? "connecting" : online ? "live" : "reconnecting";
+  const isPro = subscription?.plan === "Pro";
+  const provisioning = subscription?.status === "provisioning";
+  const upgradeLabel =
+    busy === "Upgrade to Pro"
+      ? "Upgrading…"
+      : isPro
+        ? "On Pro plan"
+        : provisioning
+          ? "Provisioning…"
+          : "Upgrade to Pro";
 
   return (
     <main className="dashboard-shell">
@@ -234,13 +244,13 @@ export function PreviewDashboard() {
             <button
               className="button button-primary"
               type="button"
-              disabled={busy !== null}
+              disabled={busy !== null || isPro || provisioning}
               onClick={() => action("Upgrade to Pro", "/api/billing/upgrade")}
             >
               <span className="button-glyph" aria-hidden="true">
                 ↑
               </span>
-              {busy === "Upgrade to Pro" ? "Upgrading…" : "Upgrade to Pro"}
+              {upgradeLabel}
             </button>
             <button
               className="button button-secondary"

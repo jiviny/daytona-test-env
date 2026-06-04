@@ -149,6 +149,16 @@ async function main() {
   assert(state.jobs?.[0]?.status === "completed", "provisioning job completed");
   assert(state.emails?.length >= 1, "a confirmation email was captured");
 
+  // Idempotency: a second upgrade to the already-provisioned plan is a benign no-op.
+  const emailsAfterUpgrade = state.emails?.length ?? 0;
+  const dup = await postJson("/api/billing/upgrade", { plan: "Pro" });
+  assert(dup.ok === true && dup.data.skipped === true, "duplicate upgrade is a no-op (skipped)");
+  const afterDup = await getJson("/api/state");
+  assert(
+    (afterDup.emails?.length ?? 0) === emailsAfterUpgrade,
+    "duplicate upgrade did not send a second confirmation email",
+  );
+
   // Webhook replay (valid signature path).
   const replay = await postJson("/api/webhooks/billing/replay");
   assert(replay.ok && replay.data.ok, "billing webhook replayed successfully");

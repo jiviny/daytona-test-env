@@ -1,4 +1,4 @@
-import { createUpgrade } from "@/lib/db.mjs";
+import { createUpgrade, cancelUpgrade } from "@/lib/db.mjs";
 import { enqueueProvisioning } from "@/lib/queue.mjs";
 import { SEED } from "@/lib/config.mjs";
 import { errorMessage } from "@/lib/util.mjs";
@@ -24,17 +24,42 @@ export async function POST(request: Request) {
     return Response.json({ ok: false, error: `unsupported plan: ${toPlan}` }, { status: 400 });
   }
 
+  let job: {
+    skipped?: boolean;
+    reason?: string;
+    jobId?: string;
+    fromPlan?: string;
+    toPlan?: string;
+    priority?: boolean;
+  };
   try {
-    const job = await createUpgrade(toPlan);
-    await enqueueProvisioning(job);
-    return Response.json({
-      ok: true,
-      jobId: job.jobId,
-      fromPlan: job.fromPlan,
-      toPlan: job.toPlan,
-      priority: job.priority,
-    });
+    job = await createUpgrade(toPlan);
   } catch (error) {
-    return Response.json({ ok: false, error: errorMessage(error) }, { status: 503 });
+    console.error("[upgrade] createUpgrade failed:", errorMessage(error));
+    return Response.json({ ok: false, error: "Upgrade is temporarily unavailable." }, { status: 503 });
   }
+
+  // Duplicate / already-on-plan: benign no-op so the demo stays clean.
+  if (job.skipped) {
+    return Response.json({ ok: true, skipped: true, message: job.reason });
+  }
+
+  try {
+    await enqueueProvisioning(job);
+  } catch (error) {
+    console.error("[upgrade] enqueue failed:", errorMessage(error));
+    await cancelUpgrade(job.jobId).catch(() => {});
+    return Response.json(
+      { ok: false, error: "Could not enqueue provisioning; the upgrade was reverted." },
+      { status: 503 },
+    );
+  }
+
+  return Response.json({
+    ok: true,
+    jobId: job.jobId,
+    fromPlan: job.fromPlan,
+    toPlan: job.toPlan,
+    priority: job.priority,
+  });
 }

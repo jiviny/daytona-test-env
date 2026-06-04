@@ -845,6 +845,10 @@ def render_markdown(result: dict[str, Any]) -> str:
     lines.append(
         f"- Signed URL expires in: `{result.get('signed_url_expires_seconds')}` seconds"
     )
+    lines.append(f"- Auto-stop after: `{result.get('auto_stop_minutes')}` minutes idle")
+    lines.append(
+        f"- Auto-delete: on PR close or after `{result.get('auto_delete_minutes')}` minutes"
+    )
     messages = result.get("messages") or []
     if messages:
         lines.append("")
