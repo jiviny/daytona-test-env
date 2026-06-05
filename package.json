@@ -11,8 +11,6 @@
     "typecheck": "tsc --noEmit",
     "preview": "npm run build && npm run start",
     "preview:dry-run": "node scripts/preview-dry-run.mjs",
-    "demo:change": "node scripts/demo-change.mjs apply",
-    "demo:reset": "node scripts/demo-change.mjs reset",
     "demo:customer": "node scripts/customer-demo.mjs",
     "worker": "node worker/index.mjs",
     "db:migrate": "node scripts/db-migrate.mjs",

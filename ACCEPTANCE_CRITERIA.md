@@ -2,7 +2,7 @@
 
 This is the single checklist that defines "done" for the full-stack
 **Billing Operations Preview** demo. It consolidates the 13 top-level acceptance
-criteria from `PLAN.md` with the per-phase criteria for phases 1-10.
+criteria from the project requirements with the per-phase criteria for phases 1-10.
 
 Each item states how it is validated. The three validation surfaces are:
 

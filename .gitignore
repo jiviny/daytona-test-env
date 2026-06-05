@@ -13,3 +13,7 @@ npm-debug.log*
 demo-artifacts/
 __pycache__/
 *.pyc
+
+# runtime logs
+*.out.log
+*.err.log
