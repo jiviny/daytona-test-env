@@ -1,0 +1,63 @@
+# Local high-fidelity full stack: real Postgres + Redis + the app + the worker.
+#
+#   npm run preview:local            # build + run everything
+#   docker compose -f docker-compose.preview.yml up -d postgres redis   # just the services
+#
+# Inside Daytona the same real Postgres + Redis are provisioned natively (no Docker), so
+# app code is identical either way.
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: billing
+      POSTGRES_PASSWORD: billing
+      POSTGRES_DB: billing_preview
+    ports:
+      - "${PG_HOST_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U billing -d billing_preview"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:8
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "${REDIS_HOST_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build: .
+    environment:
+      DATABASE_URL: postgres://billing:billing@postgres:5432/billing_preview
+      REDIS_URL: redis://redis:6379
+      PORT: "3000"
+    command: >
+      sh -lc "node scripts/db-migrate.mjs &&
+              node scripts/db-seed.mjs &&
+              node node_modules/next/dist/bin/next start -H 0.0.0.0 -p 3000"
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: .
+    environment:
+      DATABASE_URL: postgres://billing:billing@postgres:5432/billing_preview
+      REDIS_URL: redis://redis:6379
+    command: ["node", "worker/index.mjs"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy

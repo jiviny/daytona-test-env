@@ -14,15 +14,26 @@
     "demo:change": "node scripts/demo-change.mjs apply",
     "demo:reset": "node scripts/demo-change.mjs reset",
     "demo:customer": "node scripts/customer-demo.mjs",
-    "verify": "npm run lint && npm run typecheck && npm run build && npm run preview:dry-run && npm run demo:customer"
+    "worker": "node worker/index.mjs",
+    "db:migrate": "node scripts/db-migrate.mjs",
+    "db:seed": "node scripts/db-seed.mjs",
+    "preview:daytona": "node scripts/start-fullstack-preview.mjs",
+    "preview:local": "docker compose -f docker-compose.preview.yml up --build",
+    "verify:fullstack": "node scripts/verify-fullstack.mjs",
+    "verify": "npm run lint && npm run typecheck && npm run build && npm run preview:dry-run && npm run demo:customer",
+    "verify:all": "npm run verify && npm run verify:fullstack"
   },
   "dependencies": {
+    "bullmq": "^5.78.0",
+    "ioredis": "^5.11.0",
     "next": "16.2.7",
+    "pg": "^8.21.0",
     "react": "19.2.7",
     "react-dom": "19.2.7"
   },
   "devDependencies": {
     "@types/node": "25.9.1",
+    "@types/pg": "^8.20.0",
     "@types/react": "19.2.16",
     "@types/react-dom": "19.2.3",
     "eslint": "9.39.4",

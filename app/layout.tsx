@@ -2,9 +2,9 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata = {
-  title: "Daytona PR Preview Console",
+  title: "Billing Operations Preview — Daytona",
   description:
-    "A customer-facing demo of Daytona-backed pull request previews with sandbox URLs, guardrails, and cleanup.",
+    "A full-stack Daytona PR preview: Postgres, a Redis queue, a worker, captured email, and a webhook receiver behind one disposable review URL.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

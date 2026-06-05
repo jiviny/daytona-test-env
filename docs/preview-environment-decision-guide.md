@@ -123,6 +123,33 @@ Keep the first version intentionally narrow:
 - Explicit failure output in the PR or build logs.
 - Automatic teardown.
 
+## This Demo's Full-Stack Example
+
+Beyond the narrow v0, this repository now also ships a concrete full-stack example, the
+"Billing Operations Preview": a Next.js app on `0.0.0.0:3000` backed by real services -
+PostgreSQL 17, Redis (BullMQ queue), a standalone Node worker, in-database email capture,
+and a webhook receiver that validates a fake HMAC-SHA256 `x-demo-signature` header. The
+reviewed flow is deterministic: Acme Logistics upgrades from Starter to Pro
+(`POST /api/billing/upgrade`), the worker provisions the job, captures a confirmation
+email, and a billing webhook can be replayed (`POST /api/webhooks/billing/replay`).
+
+This is exactly the case where localhost is not enough. The teaching point is that the
+same real Postgres and Redis run two ways with identical app code and the same
+`DATABASE_URL` / `REDIS_URL` contract:
+
+- Locally, via Docker Compose (`npm run preview:local`,
+  `docker-compose.preview.yml`).
+- Inside Daytona, natively via `apt` (`npm run preview:daytona`). The `daytona-medium`
+  snapshot (Debian 13, Node 25) has no Docker, but has passwordless sudo, so the start
+  script installs Postgres and Redis natively in about 11 seconds and runs them as the
+  non-root user.
+
+Native provisioning is the Docker-less path: reviewers get the full stack from one
+signed URL without installing or configuring Docker. Daytona readiness for this example
+gates on `GET /api/ready` (503 until web, Postgres, Redis, worker, email, and webhook
+are all up), driven by the repo variables rather than any rewrite of the GitHub Action
+or Python helper.
+
 ## V0 Implementation Checklist
 
 1. Define the preview command.
