@@ -2,6 +2,8 @@ node_modules/
 .next/
 out/
 .env
+.env.*
+!.env.example
 .env*.local
 .env~
 .*.un~
@@ -17,3 +19,12 @@ __pycache__/
 # runtime logs
 *.out.log
 *.err.log
+
+# internal planning / strategy docs (kept local, not published)
+docs/full-stack-extension-plan.md
+docs/try-it-and-article-plan.md
+PLAN.md
+workflow.md
+whattodo
+.codex/
+.orca-agent-workflow/
