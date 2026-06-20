@@ -159,6 +159,13 @@ async function main() {
     "duplicate upgrade did not send a second confirmation email",
   );
 
+  // Provisioning auto-emits a subscription.activated billing webhook.
+  const afterProvision = await getJson("/api/state");
+  assert(
+    (afterProvision.webhooks || []).some((w) => w.event_type === "subscription.activated"),
+    "provisioning auto-emitted a subscription.activated webhook",
+  );
+
   // Webhook replay (valid signature path).
   const replay = await postJson("/api/webhooks/billing/replay");
   assert(replay.ok && replay.data.ok, "billing webhook replayed successfully");
